@@ -1,17 +1,38 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import ctypes
 from pathlib import Path
+from dotenv import load_dotenv
+import ctypes
+import os
+import psycopg
 
 app = Flask(__name__)
 CORS(app)
 
-# Load the C backend DLL
-dll_path = Path(__file__).with_name("student_api.dll")
-c_backend = ctypes.CDLL(str(dll_path))
+# Load environment variables from the main project folder
+env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(env_path)
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is missing from .env")
 
 
-# Define the Student structure in Python
+# Connect to Neon PostgreSQL
+def get_db_connection():
+    return psycopg.connect(DATABASE_URL)
+
+
+# Load the C linked-list DLL
+import platform
+
+library_name = "student_api.dll" if platform.system() == "Windows" else "libstudent_api.so"
+dll_path = Path(__file__).with_name(library_name)
+c_backend = ctypes.CDLL(str(dll_path)))
+
+
+# Define the C Student structure
 class Student(ctypes.Structure):
     pass
 
@@ -31,7 +52,7 @@ Student._fields_ = [
 ]
 
 
-# Connect C functions
+# Configure C functions
 c_backend.addStudent.argtypes = [
     ctypes.c_int,
     ctypes.c_char_p,
@@ -58,26 +79,37 @@ c_backend.updateStudent.argtypes = [
     ctypes.c_char_p,
     ctypes.c_float
 ]
-
 c_backend.updateStudent.restype = ctypes.c_int
 
-
-# Connect permanent storage functions
-c_backend.saveStudentsToFile.argtypes = [ctypes.c_char_p]
-c_backend.saveStudentsToFile.restype = ctypes.c_int
-
-c_backend.loadStudentsFromFile.argtypes = [ctypes.c_char_p]
-c_backend.loadStudentsFromFile.restype = ctypes.c_int
+c_backend.freeList.argtypes = []
+c_backend.freeList.restype = None
 
 
-# Location of the permanent student records file
-DATA_FILE = str(
-    Path(__file__).with_name("students.dat")
-).encode("utf-8")
+# Refresh the C linked list using records stored in Neon
+def refresh_linked_list():
+    with get_db_connection() as conn:
+        records = conn.execute("""
+            SELECT roll, name, email, phone, department,
+                   year, semester, marks
+            FROM students
+            ORDER BY roll
+        """).fetchall()
+
+    c_backend.freeList()
+
+    for row in records:
+        c_backend.addStudent(
+            row[0],
+            row[1].encode("utf-8"),
+            (row[2] or "").encode("utf-8"),
+            (row[3] or "").encode("utf-8"),
+            (row[4] or "").encode("utf-8"),
+            (row[5] or "").encode("utf-8"),
+            (row[6] or "").encode("utf-8"),
+            float(row[7] or 0)
+        )
 
 
-# Load previously saved records when the server starts
-c_backend.loadStudentsFromFile(DATA_FILE)
 def get_student_data(student):
     return {
         "roll": student.roll,
@@ -93,21 +125,29 @@ def get_student_data(student):
 
 @app.route("/")
 def home():
-    return "Student Record Management System - C Backend Connected!"
+    return "Student Record Management System - Neon PostgreSQL Connected!"
 
 
+# Display all students
 @app.route("/students", methods=["GET"])
 def get_students():
-    students = []
-    current = c_backend.getStudents()
+    try:
+        refresh_linked_list()
 
-    while bool(current):
-        students.append(get_student_data(current.contents))
-        current = current.contents.next
+        students = []
+        current = c_backend.getStudents()
 
-    return jsonify(students)
+        while bool(current):
+            students.append(get_student_data(current.contents))
+            current = current.contents.next
+
+        return jsonify(students)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
+# Add a student
 @app.route("/students", methods=["POST"])
 def add_student():
     data = request.get_json()
@@ -121,36 +161,37 @@ def add_student():
         return jsonify({"error": "Missing student details"}), 400
 
     try:
-        c_backend.addStudent(
-            int(data["roll"]),
-            str(data["name"]).encode("utf-8"),
-            str(data["email"]).encode("utf-8"),
-            str(data["phone"]).encode("utf-8"),
-            str(data["department"]).encode("utf-8"),
-            str(data["year"]).encode("utf-8"),
-            str(data["semester"]).encode("utf-8"),
-            float(data["marks"])
-        )
+        with get_db_connection() as conn:
+            conn.execute("""
+                INSERT INTO students
+                (roll, name, email, phone, department,
+                 year, semester, marks)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                int(data["roll"]),
+                str(data["name"]),
+                str(data["email"]),
+                str(data["phone"]),
+                str(data["department"]),
+                str(data["year"]),
+                str(data["semester"]),
+                float(data["marks"])
+            ))
+
+        refresh_linked_list()
+        return jsonify({"message": "Student added successfully"}), 201
+
+    except psycopg.errors.UniqueViolation:
+        return jsonify({"error": "Roll number already exists"}), 409
+
     except (ValueError, TypeError):
         return jsonify({"error": "Invalid student details"}), 400
 
-    if not c_backend.saveStudentsToFile(DATA_FILE):
-        return jsonify({"error": "Unable to save student records"}), 500
-
-    return jsonify({"message": "Student added"}), 201
-
-@app.route("/students/<int:roll>", methods=["DELETE"])
-def delete_student(roll):
-    result = c_backend.deleteStudent(roll)
-
-    if result:
-        if not c_backend.saveStudentsToFile(DATA_FILE):
-            return jsonify({"error": "Unable to save student records"}), 500
-        return jsonify({"message": "Student deleted"})
-
-    return jsonify({"error": "Student not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
+# Update a student
 @app.route("/students/<int:roll>", methods=["PUT"])
 def update_student(roll):
     data = request.get_json()
@@ -164,26 +205,62 @@ def update_student(roll):
         return jsonify({"error": "Missing student details"}), 400
 
     try:
-        result = c_backend.updateStudent(
-            roll,
-            str(data["name"]).encode("utf-8"),
-            str(data["email"]).encode("utf-8"),
-            str(data["phone"]).encode("utf-8"),
-            str(data["department"]).encode("utf-8"),
-            str(data["year"]).encode("utf-8"),
-            str(data["semester"]).encode("utf-8"),
-            float(data["marks"])
-        )
+        with get_db_connection() as conn:
+            result = conn.execute("""
+                UPDATE students
+                SET name = %s,
+                    email = %s,
+                    phone = %s,
+                    department = %s,
+                    year = %s,
+                    semester = %s,
+                    marks = %s
+                WHERE roll = %s
+                RETURNING roll
+            """, (
+                str(data["name"]),
+                str(data["email"]),
+                str(data["phone"]),
+                str(data["department"]),
+                str(data["year"]),
+                str(data["semester"]),
+                float(data["marks"]),
+                roll
+            ))
+
+            if result.fetchone() is None:
+                return jsonify({"error": "Student not found"}), 404
+
+        refresh_linked_list()
+        return jsonify({"message": "Student updated successfully"})
+
     except (ValueError, TypeError):
         return jsonify({"error": "Invalid student details"}), 400
 
-    if result:
-        if not c_backend.saveStudentsToFile(DATA_FILE):
-            return jsonify({"error": "Unable to save student records"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-        return jsonify({"message": "Student updated"})
 
-    return jsonify({"error": "Student not found"}), 404
+# Delete a student
+@app.route("/students/<int:roll>", methods=["DELETE"])
+def delete_student(roll):
+    try:
+        with get_db_connection() as conn:
+            result = conn.execute("""
+                DELETE FROM students
+                WHERE roll = %s
+                RETURNING roll
+            """, (roll,))
+
+            if result.fetchone() is None:
+                return jsonify({"error": "Student not found"}), 404
+
+        refresh_linked_list()
+        return jsonify({"message": "Student deleted successfully"})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(debug=True)
