@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Record Management System</title>
+
+    <!-- Connecting CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- Main Website Layout -->
+    <div class="container">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+
+            <div class="logo">
+                <h2>SRMS</h2>
+                <p>Student Management</p>
+            </div>
+
+            <nav class="navigation">
+                <button class="nav-link active" data-page="dashboard">
+                    Dashboard
+                </button>
+
+                <button class="nav-link" data-page="add-student">
+                    Add Student
+                </button>
+
+                <button class="nav-link" data-page="students">
+                    All Students
+                </button>
+
+                <button class="nav-link" data-page="reports">
+                    Reports & Analytics
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <p>Student Record Management</p>
+                <small>Version 1.0</small>
+            </div>
+
+        </aside>
+
+
+        <!-- Main Content -->
+        <main class="main-content">
+
+            <!-- Top Header -->
+            <header class="top-header">
+                <div>
+                    <h2>Student Record Management System</h2>
+                    <p>Manage your student records easily</p>
+                </div>
+
+                <div class="admin-profile">
+                    <span>Administrator</span>
+                </div>
+            </header>
+
+
+            <!-- Dashboard Page -->
+            <section id="dashboard" class="page active">
+
+                <div class="welcome-section">
+                    <h1>Welcome Back!</h1>
+                    <p>
+                        Here's an overview of your student records.
+                    </p>
+                </div>
+
+                <!-- Statistics Cards -->
+                <div class="stats-container">
+
+                    <div class="stat-card">
+                        <h3>Total Students</h3>
+                        <p id="totalStudents">0</p>
+                    </div>
+
+                    <div class="stat-card">
+                        <h3>Average Marks</h3>
+                        <p id="averageMarks">0%</p>
+                    </div>
+
+                    <div class="stat-card">
+                        <h3>Top Marks</h3>
+                        <p id="topMarks">0</p>
+                    </div>
+
+                    <div class="stat-card">
+                        <h3>Departments</h3>
+                        <p id="totalDepartments">0</p>
+                    </div>
+
+                </div>
+
+                <!-- Recent Students -->
+                <div class="content-card">
+                    <div class="section-heading">
+                        <h2>Recent Students</h2>
+
+                        <button class="primary-btn"
+                            data-go="students">
+                            View All
+                        </button>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Roll No</th>
+                                    <th>Name</th>
+                                    <th>Department</th>
+                                    <th>Marks</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="recentStudentsBody">
+                                <tr>
+                                    <td colspan="4">
+                                        No student records available.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </section>
+
+
+            <!-- Add Student Page -->
+            <section id="add-student" class="page">
+
+                <div class="welcome-section">
+                    <h1>Add New Student</h1>
+                    <p>Enter the student's details below.</p>
+                </div>
+
+                <div class="content-card">
+
+                    <form id="studentForm">
+
+                        <div class="form-grid">
+
+                            <div class="form-group">
+                                <label for="roll">Roll Number</label>
+                                <input type="number" id="roll"
+                                    placeholder="Enter roll number"
+                                    min="1" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="name">Full Name</label>
+                                <input type="text" id="name"
+                                    placeholder="Enter full name"
+                                    maxlength="49" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="email">Email Address</label>
+                                <input type="email" id="email"
+                                    placeholder="Enter email address"
+                                    required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="phone">Phone Number</label>
+                                <input type="tel" id="phone"
+                                    placeholder="Enter phone number"
+                                    required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="department">Department</label>
+                                <select id="department" required>
+                                    <option value="">Select Department</option>
+                                    <option value="CSE">Computer Science</option>
+                                    <option value="ECE">Electronics</option>
+                                    <option value="EEE">Electrical</option>
+                                    <option value="IT">Information Technology</option>
+                                    <option value="MECH">Mechanical</option>
+                                    <option value="CIVIL">Civil</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="year">Year</label>
+                                <select id="year" required>
+                                    <option value="">Select Year</option>
+                                    <option value="1">First Year</option>
+                                    <option value="2">Second Year</option>
+                                    <option value="3">Third Year</option>
+                                    <option value="4">Fourth Year</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="semester">Semester</label>
+                                <select id="semester" required>
+                                    <option value="">Select Semester</option>
+                                    <option value="1">Semester 1</option>
+                                    <option value="2">Semester 2</option>
+                                    <option value="3">Semester 3</option>
+                                    <option value="4">Semester 4</option>
+                                    <option value="5">Semester 5</option>
+                                    <option value="6">Semester 6</option>
+                                    <option value="7">Semester 7</option>
+                                    <option value="8">Semester 8</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="marks">Marks</label>
+                                <input type="number" id="marks"
+                                    placeholder="Enter marks"
+                                    min="0" max="100" step="0.01"
+                                    required>
+                            </div>
+
+                        </div>
+
+                        <div class="form-buttons">
+                            <button type="submit" class="primary-btn">
+                                Save Student
+                            </button>
+
+                            <button type="reset" class="secondary-btn">
+                                Clear Form
+                            </button>
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </section>
+
+
+            <!-- All Students Page -->
+            <section id="students" class="page">
+
+                <div class="welcome-section">
+                    <h1>All Students</h1>
+                    <p>View and manage all student records.</p>
+                </div>
+
+                <div class="content-card">
+
+                    <div class="section-heading">
+                        <h2>Student Records</h2>
+
+                        <input type="search" id="searchInput"
+                            placeholder="Search by roll number or name...">
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Roll No</th>
+                                    <th>Name</th>
+                                    <th>Department</th>
+                                    <th>Year</th>
+                                    <th>Semester</th>
+                                    <th>Marks</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="studentsTableBody">
+                                <tr>
+                                    <td colspan="7">
+                                        No student records available.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- Reports Page -->
+            <section id="reports" class="page">
+
+                <div class="welcome-section">
+                    <h1>Reports & Analytics</h1>
+                    <p>Analyse student performance and records.</p>
+                </div>
+
+                <div class="stats-container">
+
+                    <div class="stat-card">
+                        <h3>Highest Marks</h3>
+                        <p id="highestMarks">0</p>
+                    </div>
+
+                    <div class="stat-card">
+                        <h3>Lowest Marks</h3>
+                        <p id="lowestMarks">0</p>
+                    </div>
+
+                    <div class="stat-card">
+                        <h3>Average Marks</h3>
+                        <p id="reportAverage">0%</p>
+                    </div>
+
+                </div>
+
+                <div class="content-card">
+    <h2>Performance Overview</h2>
+
+    <p id="reportMessage">
+        Add student records to view performance reports.
+    </p>
+
+    <div class="chart-container">
+        <canvas id="performanceChart"></canvas>
+    </div>
+</div>
+<div class="chart-container">
+    <canvas id="passFailChart"></canvas>
+</div>
+
+            </section>
+
+
+            <!-- Footer -->
+            <footer class="footer">
+                <p>
+                    © 2026 Student Record Management System.
+                    All Rights Reserved.
+                </p>
+            </footer>
+
+        </main>
+
+    </div>
+
+    <!-- Connecting JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>

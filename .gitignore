@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.dll
+*.exe
+backend/students.dat
+.env
